@@ -1,0 +1,12 @@
+push 1
+popr RAX
+pushr RAX
+pushr RAX
+mul
+out
+pushr RAX
+push 1
+add
+popr RAX
+jmp 4
+hlt
