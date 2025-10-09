@@ -1,12 +1,81 @@
-push 1
+in
 popr RAX
+in
+popr RBX
+in
+popr RCX
+
+
 pushr RAX
+push 0
+je 102
+
+pushr RBX
+pushr RBX
+mul
+push 4
 pushr RAX
 mul
+pushr RCX
+mul
+sub
+popr RDX
+
+pushr RDX
+push 0
+jb 97
+
+pushr RDX
+push 0
+je 80
+
+push 2
 out
-pushr RAX
-push 1
+
+pushr RBX
+push -1
+mul
+pushr RDX
+sqrt
 add
-popr RAX
-jmp 4
+push 2
+pushr RAX
+mul
+div
+out
+
+pushr RBX
+push -1
+mul
+pushr RDX
+sqrt
+sub
+push 2
+pushr RAX
+mul
+div
+out
+jmp 105
+
+push 1
+out
+
+pushr RBX
+push -1
+mul
+push 2
+pushr RAX
+mul
+div
+out
+jmp 105
+
+push 0
+out
+jmp 105
+
+push -1
+out
+
+
 hlt
