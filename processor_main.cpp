@@ -9,9 +9,11 @@ int main()
     processor_t cpu;
 
     processorCtor(&cpu);
-    processorDump(&cpu, "Создан");
+    // processorDump(&cpu, "Создан");
 
     processingFromFile("processor.bin", &cpu);
+
+    // processorDump(&cpu, "Завершили работу");
 
     return 0;
 }
