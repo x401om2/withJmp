@@ -2,8 +2,13 @@
 #include <string.h>
 #include "processorOperations.h"
 #include "assembler.h"
-//TODO main можно сразу
-// просто перекинуть внутрянку
+#include "commandConfig.h"
+
+
+#define MAX_COMMANDS 1000
+
+
+
 
 int translator()
 {
@@ -26,130 +31,182 @@ int translator()
     return 0;
 }
 
-int readCommandsToBuffer(FILE* assemblya, int* pogrebuffer, int pogrebufferSize)
+int readCommandsFromFile(FILE* file, char commands[][20], int maxCommands)
 {
     char command[20] = "";
-    char registerName[10] = "";
+    int commandCount = 0;
 
-    int number = 0;
-    int countOfCommands = 0;
-    int enumOfName = 0;
-
-    while (fscanf(assemblya, "%s", command) != EOF && countOfCommands < pogrebufferSize)
+    printf("=== ЧТЕНИЕ КОМАНД ===\n");
+    while (fscanf(file, "%s", command) != EOF && commandCount < maxCommands)
     {
-        enumOfName = stringNameToEnum(command);
+        strcpy(commands[commandCount], command);
+        printf("Прочитана команда: '%s' (индекс: %d)\n", command, commandCount);
+        commandCount++;
+    }
+    return commandCount;
+}
+
+void firstPassCollectLabels(char commands[][20], int commandCount, Label labels[])
+{
+    printf("\n=== ПЕРВЫЙ ПРОХОД ===\n");
+    int currentAddress = 0;
+
+    for (int i = 0; i < commandCount; i++)
+    {
+        printf("Обрабатываем: '%s' (адрес: %d)\n", commands[i], currentAddress);
+
+        if (commands[i][0] == ':')
+        {
+            int labelNum = atoi(commands[i] + 1);
+            if (labelNum >= 0 && labelNum < MAX_LABELS)
+            {
+                labels[labelNum].address = currentAddress;
+                printf("Найдена метка :%d -> адрес %d\n", labelNum, currentAddress);
+            }
+        }
+        else
+        {
+            int enumOfName = stringNameToEnum(commands[i]);
+
+            if (enumOfName != -1 && commandHasArgument(enumOfName))
+            {
+                currentAddress += 2;
+                i++;
+                printf("Команда с аргументом '%s' -> новый адрес: %d\n", commands[i-1], currentAddress);
+            }
+            else if (enumOfName != -1)
+            {
+                currentAddress += 1;
+                printf("Команда '%s' -> новый адрес: %d\n", commands[i], currentAddress);
+            }
+        }
+    }
+}
+
+void printLabels(Label labels[])
+{
+    printf("\n=== НАЙДЕННЫЕ МЕТКИ ===\n");
+    for (int i = 0; i < MAX_LABELS; i++)
+    {
+        if (labels[i].address != -1)
+        {
+            printf("Метка :%d -> адрес %d\n", i, labels[i].address);
+        }
+    }
+}
+
+int secondPassGenerateCode(char commands[][20], int commandCount, int pogrebuffer[], int pogrebufferSize, Label labels[])
+{
+    printf("\n=== ВТОРОЙ ПРОХОД ===\n");
+    int countOfCommands = 0;
+
+    for (int i = 0; i < commandCount && countOfCommands < pogrebufferSize; i++)
+    {
+        if (commands[i][0] == ':')
+        {
+            printf("Пропускаем метку: %s\n", commands[i]);
+            continue;
+        }
+
+        int enumOfName = stringNameToEnum(commands[i]);
+        printf("Обрабатываем команду: '%s' (enum=%d) на позиции %d\n", commands[i], enumOfName, countOfCommands);
+
         switch (enumOfName)
         {
             case CMD_PUSH:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_PUSH;
-                pogrebuffer[countOfCommands++] = number;
+                countOfCommands = handlePush(commands, &i, pogrebuffer, countOfCommands);
                 break;
 
             case CMD_PUSHR:
-            {
-                fscanf(assemblya, "%s", registerName);
-                int regIndexPush = registerNameToIndex(registerName);
-                if (regIndexPush == -1) break;
-                pogrebuffer[countOfCommands++] = CMD_PUSHR;
-                pogrebuffer[countOfCommands++] = regIndexPush;
+                countOfCommands = handlePushR(commands, &i, pogrebuffer, countOfCommands);
                 break;
-            }
+
             case CMD_POPR:
-            {
-                fscanf(assemblya, "%s", registerName);
-                int regIndexPop = registerNameToIndex(registerName);
-                if (regIndexPop == -1) break;
-                pogrebuffer[countOfCommands++] = CMD_POPR;
-                pogrebuffer[countOfCommands++] = regIndexPop;
+                countOfCommands = handlePopR(commands, &i, pogrebuffer, countOfCommands);
                 break;
-            }
+
             case CMD_JMP:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JMP;
-                pogrebuffer[countOfCommands++] = number;
-                break;
-
             case CMD_JB:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JB;
-                pogrebuffer[countOfCommands++] = number;
-                break;
-
             case CMD_JBE:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JBE;
-                pogrebuffer[countOfCommands++] = number;
-                break;
-
             case CMD_JE:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JE;
-                pogrebuffer[countOfCommands++] = number;
-                break;
-
             case CMD_JNE:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JNE;
-                pogrebuffer[countOfCommands++] = number;
-                break;
-
             case CMD_JA:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JA;
-                pogrebuffer[countOfCommands++] = number;
+            case CMD_JAE:
+            case CMD_CALL:
+                countOfCommands = processJumpCommandFromArray(enumOfName, commands, &i, labels, pogrebuffer, countOfCommands);
                 break;
 
-            case CMD_JAE:
-                fscanf(assemblya, "%d", &number);
-                pogrebuffer[countOfCommands++] = CMD_JAE;
-                pogrebuffer[countOfCommands++] = number;
+            case CMD_RET:
+                countOfCommands = handleSimpleCommand(CMD_RET, pogrebuffer, countOfCommands, "RET");
                 break;
 
             case CMD_ADD:
-                pogrebuffer[countOfCommands++] = CMD_ADD;
+                countOfCommands = handleSimpleCommand(CMD_ADD, pogrebuffer, countOfCommands, "ADD");
                 break;
 
             case CMD_SUB:
-                pogrebuffer[countOfCommands++] = CMD_SUB;
+                countOfCommands = handleSimpleCommand(CMD_SUB, pogrebuffer, countOfCommands, "SUB");
                 break;
 
             case CMD_MUL:
-                pogrebuffer[countOfCommands++] = CMD_MUL;
+                countOfCommands = handleSimpleCommand(CMD_MUL, pogrebuffer, countOfCommands, "MUL");
                 break;
 
             case CMD_DIV:
-                pogrebuffer[countOfCommands++] = CMD_DIV;
+                countOfCommands = handleSimpleCommand(CMD_DIV, pogrebuffer, countOfCommands, "DIV");
                 break;
 
             case CMD_OUT:
-                pogrebuffer[countOfCommands++] = CMD_OUT;
+                countOfCommands = handleSimpleCommand(CMD_OUT, pogrebuffer, countOfCommands, "OUT");
                 break;
 
             case CMD_SQRT:
-                pogrebuffer[countOfCommands++] = CMD_SQRT;
+                countOfCommands = handleSimpleCommand(CMD_SQRT, pogrebuffer, countOfCommands, "SQRT");
                 break;
 
             case CMD_IN:
-                pogrebuffer[countOfCommands++] = CMD_IN;
+                countOfCommands = handleSimpleCommand(CMD_IN, pogrebuffer, countOfCommands, "IN");
                 break;
 
             case CMD_HLT:
-                pogrebuffer[countOfCommands++] = CMD_HLT;
+                countOfCommands = handleSimpleCommand(CMD_HLT, pogrebuffer, countOfCommands, "HLT");
                 break;
 
             default:
-                printf("Неизвестная команда: %s\n", command);
+                printf("Неизвестная команда: %s\n", commands[i]);
                 break;
         }
-
-        if (enumOfName == CMD_HLT) break;
     }
 
     return countOfCommands;
 }
 
-// бля мне самому противно стопроцентный свитч????
+int readCommandsToBuffer(FILE* assem_blya, int* pogrebuffer, int pogrebufferSize)
+{
+    char commands[MAX_COMMANDS][20] = {0};
+    Label labels[MAX_LABELS] = {};
+
+    // Инициализация меток
+    for (int i = 0; i < MAX_LABELS; i++)
+    {
+        labels[i].address = -1;
+    }
+
+    // Чтение команд из файла
+    int commandCount = readCommandsFromFile(assem_blya, commands, MAX_COMMANDS);
+
+    // Первый проход - сбор меток
+    firstPassCollectLabels(commands, commandCount, labels);
+
+    // Печать найденных меток
+    printLabels(labels);
+
+    // Второй проход - генерация кода
+    int result = secondPassGenerateCode(commands, commandCount, pogrebuffer, pogrebufferSize, labels);
+
+    return result;
+}
+
 int registerNameToIndex(const char* registerName)
 {
     if (strcmp(registerName, "RAX") == 0) return REG_RAX;
@@ -181,6 +238,76 @@ int stringNameToEnum(const char* stringName)
     if (strcmp(stringName, "sqrt") == 0) return CMD_SQRT;
     if (strcmp(stringName, "in") == 0) return CMD_IN;
     if (strcmp(stringName, "hlt") == 0) return CMD_HLT;
+    if (strcmp(stringName, "call") == 0) return CMD_CALL;
+    if (strcmp(stringName, "ret") == 0) return CMD_RET;
 
     return -1;
+}
+
+int processJumpCommandFromArray(int command, char commands[][20], int* currentIndex, Label labels[], int buffer[], int bufferPos)
+{
+    char labelName[20] = "";
+    strcpy(labelName, commands[++(*currentIndex)]); // Берем следующий токен как метку
+
+    // Пропускаем ':' в начале метки если есть
+    const char* labelStr = (labelName[0] == ':') ? labelName + 1 : labelName;
+    int labelNum = atoi(labelStr);
+
+    buffer[bufferPos++] = command;
+
+    if (labelNum >= 0 && labelNum < MAX_LABELS && labels[labelNum].address != -1)
+    {
+        buffer[bufferPos++] = labels[labelNum].address;
+        printf("Записали команду %d с адресом перехода %d\n", command, labels[labelNum].address);
+    }
+    else
+    {
+        buffer[bufferPos++] = -1; // или обработка ошибки
+        printf("Ошибка: метка :%d не найдена!\n", labelNum);
+    }
+
+    return bufferPos;
+}
+
+
+// массивы всего нахуй проверить чтобы без огромных перечислений - хуйня полная
+
+// вместо switch указат на функцию и тд
+
+
+
+int handlePush(char commands[][20], int* index, int buffer[], int bufferPos)
+{
+    int number = atoi(commands[++(*index)]);
+    buffer[bufferPos++] = CMD_PUSH;
+    buffer[bufferPos++] = number;
+    printf("Записали PUSH %d\n", number);
+    return bufferPos;
+}
+
+int handlePushR(char commands[][20], int* index, int buffer[], int bufferPos)
+{
+    char registerName[10] = "";
+    strcpy(registerName, commands[++(*index)]);
+    buffer[bufferPos++] = CMD_PUSHR;
+    buffer[bufferPos++] = registerNameToIndex(registerName);
+    printf("Записали PUSHR %s\n", registerName);
+    return bufferPos;
+}
+
+int handlePopR(char commands[][20], int* index, int buffer[], int bufferPos)
+{
+    char registerName[10] = "";
+    strcpy(registerName, commands[++(*index)]);
+    buffer[bufferPos++] = CMD_POPR;
+    buffer[bufferPos++] = registerNameToIndex(registerName);
+    printf("Записали POPR %s\n", registerName);
+    return bufferPos;
+}
+
+int handleSimpleCommand(int command, int buffer[], int bufferPos, const char* commandName)
+{
+    buffer[bufferPos++] = command;
+    printf("Записали %s\n", commandName);
+    return bufferPos;
 }

@@ -8,7 +8,7 @@ popr RCX
 
 pushr RAX
 push 0
-je 102
+je :2
 
 pushr RBX
 pushr RBX
@@ -23,11 +23,11 @@ popr RDX
 
 pushr RDX
 push 0
-jb 97
+jb :2
 
 pushr RDX
 push 0
-je 80
+je :3
 
 push 2
 out
@@ -55,11 +55,12 @@ pushr RAX
 mul
 div
 out
-jmp 105
+jmp :4
 
 push 1
 out
 
+:3
 pushr RBX
 push -1
 mul
@@ -68,14 +69,17 @@ pushr RAX
 mul
 div
 out
-jmp 105
+jmp :4
 
+:2
 push 0
 out
-jmp 105
+jmp :4
 
+:1
 push -1
 out
 
-
+:4
 hlt
+
