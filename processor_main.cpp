@@ -6,7 +6,7 @@
 
 int main()
 {
-    processor_t cpu;
+    processor_t cpu = {0};
 
     processorCtor(&cpu);
     // processorDump(&cpu, "Создан");
