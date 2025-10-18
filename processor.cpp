@@ -6,7 +6,6 @@
 #include "commandConfig.h"
 #include <unistd.h>
 
-#define MAX_COMMANDS 300
 
 int processingFromFile(const char* filename, processor_t* processor)
 {
@@ -65,7 +64,7 @@ void executeProcessor(processor_t* processor)
     {
         int currentCommand = processor -> code[processor -> pointerOfInstruction];
 
-        int commandSize = commandHasArgument(currentCommand) ? 2 : 1;
+        int commandSize = commandHasArgument(currentCommand) ? 2 : 1;                                   // если есть аргументы то команда занимает 2 ячейки в массиве
 
         processCommand(processor, currentCommand);
 
@@ -85,7 +84,7 @@ void processCommand(processor_t* processor, int command)
     {
         case CMD_PUSH:
         {
-            int value = processor -> code[processor -> pointerOfInstruction + 1];
+            int value = processor -> code[processor -> pointerOfInstruction + 1]; //ХУЙНЯ ПЕРЕДЕЛЫВАЙ -
             // printf("PUSH %d\n", value);
             operationsOfProcessor(CMD_PUSH, value, &processor -> calcStack, processor -> registers, processor);
             break;
