@@ -5,11 +5,56 @@ popr RBX
 in
 popr RCX
 
-
 pushr RAX
 push 0
-je :2
+je :zero_a
 
+call :solve_quadratic
+jmp :end
+
+:zero_a
+pushr RBX
+push 0
+je :zero_b
+
+call :solve_linear
+jmp :end
+
+:zero_b
+pushr RCX
+push 0
+je :zero_c
+
+push 0
+out
+jmp :end
+
+:zero_c
+push -1
+out
+
+:end
+hlt
+
+:no_solution
+push 0
+out
+ret
+
+:one_solution
+push 1
+out
+pushr RBX
+push -1
+mul
+push 2
+pushr RAX
+mul
+div
+out
+ret
+
+:solve_quadratic
 pushr RBX
 pushr RBX
 mul
@@ -23,15 +68,14 @@ popr RDX
 
 pushr RDX
 push 0
-jb :2
+jb :no_solution
 
 pushr RDX
 push 0
-je :3
+je :one_solution
 
 push 2
 out
-
 pushr RBX
 push -1
 mul
@@ -43,7 +87,6 @@ pushr RAX
 mul
 div
 out
-
 pushr RBX
 push -1
 mul
@@ -55,31 +98,15 @@ pushr RAX
 mul
 div
 out
-jmp :4
+ret
 
+:solve_linear
 push 1
 out
-
-:3
-pushr RBX
+pushr RCX
 push -1
 mul
-push 2
-pushr RAX
-mul
+pushr RBX
 div
 out
-jmp :4
-
-:2
-push 0
-out
-jmp :4
-
-:1
-push -1
-out
-
-:4
-hlt
-
+ret

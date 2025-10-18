@@ -1,0 +1,29 @@
+in
+call :1
+out
+hlt
+
+:1
+popr RAX
+pushr RAX
+out
+pushr RAX
+push 1
+je :2
+
+pushr RAX
+pushr RAX
+push 1
+sub
+call :1
+
+mul
+push 777
+out
+ret
+
+:2
+push 1
+push -1
+out
+ret
